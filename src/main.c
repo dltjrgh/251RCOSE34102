@@ -1,8 +1,8 @@
 #include "fcfs.h"
 #include "lif.h"
 #include "lisc.h"
-#include "plisc.h"
 #include "plif.h"
+#include "plisc.h"
 #include "pool.h"
 #include "pps.h"
 #include "ps.h"
@@ -92,9 +92,109 @@ void setup_random_processes(Pool *pool, int num_proc, int max_arrival,
   }
 }
 
+int get_num_rdm_proc_from_file(const char *filename) {
+  FILE *file = fopen(filename, "r");
+  if (file == NULL) {
+    perror("Error opening config file");
+    exit(EXIT_FAILURE);
+  }
+
+  int num_set;
+  int acc = 0;
+  if (fscanf(file, "%d", &num_set) != 1) {
+    fprintf(stderr, "Error reading number of random processes from %s\n",
+            filename);
+    fclose(file);
+    exit(EXIT_FAILURE);
+  }
+  for (int i = 0; i < num_set; i++) {
+    int num_proc, arrival_lb, arrival_ub, burst_lb, burst_ub, dummy;
+
+    if (fscanf(file, "%d %d %d %d %d", &num_proc, &arrival_lb, &arrival_ub,
+               &burst_lb, &burst_ub) != 5) {
+      fprintf(stderr, "Error reading process set %d\n", i + 1);
+      fclose(file);
+      exit(EXIT_FAILURE);
+    }
+
+    while (fscanf(file, "%d", &dummy) == 1 && dummy != 0) {
+      ;
+    }
+
+    acc += num_proc;
+  }
+
+  fclose(file);
+  return acc;
+}
+
+void set_adtl_random_processes(Pool *pool, int index, int num_proc,
+                               int arrival_lb, int arrival_ub, int burst_lb,
+                               int burst_ub) {
+  srand(time(NULL));
+
+  for (int i = 0; i < num_proc; i++) {
+    int arrival_time =
+        rand() % (arrival_ub - arrival_lb + 1) +
+        arrival_lb; // Random arrival time between arrival_lb and arrival_ub
+    int priority = rand() % 5 + 1; // Random priority between 1 and 5
+    int total_burst_time =
+        rand() % (burst_ub - burst_lb + 1) +
+        burst_lb; // Random burst time between burst_lb and burst_ub
+    Queue *workloads = create_queue();
+    while (total_burst_time > 0) {
+      int burst_t = rand() % total_burst_time + 1; // Random burst time
+      add_workload(workloads, burst_t);
+      total_burst_time -= burst_t; // Decrease the remaining burst time
+    }
+    Process *process =
+        create_process(index + i, arrival_time, priority, workloads);
+    insert_heap(pool, process);
+  }
+}
+
+void setup_rdm_processes_from_file(Pool *pool, int index,
+                                   const char *filename) {
+  FILE *file = fopen(filename, "r");
+  if (file == NULL) {
+    perror("Error opening config file");
+    exit(EXIT_FAILURE);
+  }
+
+  int num_set;
+  if (fscanf(file, "%d", &num_set) != 1) {
+    fprintf(stderr, "Error reading number of processes\n");
+    fclose(file);
+    exit(EXIT_FAILURE);
+  }
+
+  for (int i = 0; i < num_set; i++) {
+    int num_proc, arrival_lb, arrival_ub, burst_lb, burst_ub, dummy;
+
+    if (fscanf(file, "%d %d %d %d %d", &num_proc, &arrival_lb, &arrival_ub,
+               &burst_lb, &burst_ub) != 5) {
+      fprintf(stderr, "Error reading arrival time or priority for process %d\n",
+              index);
+      fclose(file);
+      exit(EXIT_FAILURE);
+    }
+
+    while (fscanf(file, "%d", &dummy) == 1 && dummy != 0) {
+      ;
+    }
+
+    set_adtl_random_processes(pool, index, num_proc, arrival_lb, arrival_ub,
+                              burst_lb, burst_ub);
+    index += num_proc; // Update index for the next set of processes
+  }
+
+  fclose(file);
+}
+
 int main(int argc, char *argv[]) {
   int c;
   int num_rand_proc = 0;
+  int num_adtl_rand_proc = 0;
   int num_custom_proc = 0;
   int tot_proc = 0;
   int max_arrival = 0;
@@ -143,11 +243,14 @@ int main(int argc, char *argv[]) {
   printf("************************************************\n");
 
   num_custom_proc = get_num_proc_from_file("custom_processes.txt");
-  tot_proc = num_rand_proc + num_custom_proc;
+  num_adtl_rand_proc = get_num_rdm_proc_from_file("random_processes.txt");
+  tot_proc = num_rand_proc + num_custom_proc + num_adtl_rand_proc;
   Pool *fcfs_pool = create_pool(tot_proc);
 
-  setup_processes_from_file(fcfs_pool, num_rand_proc, "custom_processes.txt");
   setup_random_processes(fcfs_pool, num_rand_proc, max_arrival, max_burst);
+  setup_processes_from_file(fcfs_pool, num_rand_proc, "custom_processes.txt");
+  setup_rdm_processes_from_file(fcfs_pool, num_rand_proc + num_custom_proc,
+                                "random_processes.txt");
 
   Pool *sjf_pool = duplicate_pool(fcfs_pool);
   Pool *psjf_pool = duplicate_pool(fcfs_pool);
@@ -226,7 +329,6 @@ int main(int argc, char *argv[]) {
   plisc_state = plisc_init(plisc_pool, tot_proc);
   execute_plisc(plisc_state);
   printf("***************************************************************\n");
-
 
   return 0;
 }

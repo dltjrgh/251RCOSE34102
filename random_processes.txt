@@ -1,0 +1,16 @@
+2
+4 2 10 3 9 0
+1 100 140 5 8 0
+
+(***************** Cutom Random Processes File *****************)
+(* Comments must come here, after the final line
+ * This file defines custom random processes for a simulation
+ * First line should contain a single integer indicating the number of process sets (following lines).
+ * Then n lines follow,
+ * first integer (i.e. 3 in the second line) indicates the numebr of processes in that set,
+ * second integer indicates the lower bound of the arrival time,
+ * third integer indicates the upper bound of the arrival time,
+ * fourth integer indicates the lower bound of the burst time,
+ * fifth integer indicates the upper bound of the burst time,
+ * The last integer in each line is always 0, indicating the end of the line. *)
+(*********************************************************)
