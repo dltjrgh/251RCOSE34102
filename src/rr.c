@@ -1,7 +1,7 @@
-#include "fcfs.h"
+#include "rr.h"
 
-FCFSState *fcfs_init(Pool *pool) {
-  FCFSState *state = (FCFSState *)malloc(sizeof(FCFSState));
+RRState *rr_init(Pool *pool, int quantum) {
+  RRState *state = (RRState *)malloc(sizeof(RRState));
   if (state == NULL) {
     return NULL; // Memory allocation failed
   }
@@ -10,6 +10,8 @@ FCFSState *fcfs_init(Pool *pool) {
   state->current_time = 0;
   state->running_process = NULL;
   state->running_since = 0;
+  state->quantum = quantum;
+  state->remaining_quantum = quantum;
   state->ready_queue = create_queue();
   state->waiting_queue = create_queue();
   state->terminated_queue = create_queue();
@@ -18,7 +20,7 @@ FCFSState *fcfs_init(Pool *pool) {
   return state;
 }
 
-void fcfs_add_ready(FCFSState *state, Process *process) {
+void rr_add_ready(RRState *state, Process *process) {
   if (state == NULL || process == NULL) {
     return; // Invalid state or process
   }
@@ -26,7 +28,7 @@ void fcfs_add_ready(FCFSState *state, Process *process) {
   enqueue(state->ready_queue, process);
 }
 
-void fcfs_add_waiting(FCFSState *state, Process *process) {
+void rr_add_waiting(RRState *state, Process *process) {
   if (state == NULL || process == NULL) {
     return; // Invalid state or process
   }
@@ -40,7 +42,7 @@ void fcfs_add_waiting(FCFSState *state, Process *process) {
   }
 }
 
-void fcfs_add_terminated(FCFSState *state, Process *process) {
+void rr_add_terminated(RRState *state, Process *process) {
   if (state == NULL || process == NULL) {
     return; // Invalid state or process
   }
@@ -48,7 +50,7 @@ void fcfs_add_terminated(FCFSState *state, Process *process) {
   enqueue(state->terminated_queue, process);
 }
 
-Process *fcfs_remove_ready(FCFSState *state) {
+Process *rr_remove_ready(RRState *state) {
   if (state == NULL || is_empty(state->ready_queue)) {
     return NULL; // Invalid state or empty queue
   }
@@ -56,7 +58,7 @@ Process *fcfs_remove_ready(FCFSState *state) {
   return dequeue(state->ready_queue);
 }
 
-Process *fcfs_remove_waiting(FCFSState *state) {
+Process *rr_remove_waiting(RRState *state) {
   if (state == NULL || is_empty(state->waiting_queue)) {
     return NULL; // Invalid state or empty queue
   }
@@ -64,7 +66,7 @@ Process *fcfs_remove_waiting(FCFSState *state) {
   return dequeue(state->waiting_queue);
 }
 
-void fcfs_consume_time_waiting(FCFSState *state) {
+void rr_consume_time_waiting(RRState *state) {
   if (state == NULL || is_empty(state->waiting_queue)) {
     return; // Invalid state or empty queue
   }
@@ -79,25 +81,26 @@ void fcfs_consume_time_waiting(FCFSState *state) {
     if (workload->is_cpu == 0 && workload->duration == 0) {
       // If the workload is finished, remove it
       remove_workload(process);
-      fcfs_remove_waiting(state);
+      rr_remove_waiting(state);
       if (is_empty(process->workloads)) {
         // If no workloads left, move to terminated queue
-        fcfs_add_terminated(state, process);
+        rr_add_terminated(state, process);
       } else {
         // If still has workloads, move to ready queue
-        fcfs_add_ready(state, process);
+        rr_add_ready(state, process);
       }
     }
   }
 }
 
-void fcfs_consume_time_running(FCFSState *state) {
+void rr_consume_time_running(RRState *state) {
   if (state == NULL || state->running_process == NULL) {
     return; // Invalid state or no running process
   }
 
   Workload *workload = state->running_process->workloads->front->data;
-  if (workload != NULL && workload->is_cpu == 1 && workload->duration > 0) {
+  if (workload != NULL && workload->duration > 0) {
+    assert(workload->is_cpu == 1); // Should be a CPU workload
     workload->duration--;
     if (workload->duration == 0) {
       // If the CPU burst is finished, log the gantt chart
@@ -107,25 +110,26 @@ void fcfs_consume_time_running(FCFSState *state) {
       remove_workload(state->running_process);
       // If no workloads left, move to terminated queue
       if (is_empty(state->running_process->workloads)) {
-        fcfs_add_terminated(state, state->running_process);
+        rr_add_terminated(state, state->running_process);
         state->running_process = NULL;
       } else {
         // If still has workloads, move to waiting queue
-        fcfs_add_waiting(state, state->running_process);
+        rr_add_waiting(state, state->running_process);
         state->running_process = NULL;
       }
+      state->remaining_quantum = state->quantum; // Reset quantum
     }
   }
 }
 
-void fcfs_get_from_pools(FCFSState *state) {
+void rr_get_from_pools(RRState *state) {
   // Bring the processes from the pool that has arrived before or at the
   // current time
   while (get_min_arrival_time(state->pool) <= state->current_time) {
 
     Process *process = extract_min(state->pool);
     if (process != NULL) {
-      fcfs_add_ready(state, process);
+      rr_add_ready(state, process);
     }
 
     if (get_min_arrival_time(state->pool) == -1) {
@@ -134,34 +138,61 @@ void fcfs_get_from_pools(FCFSState *state) {
   }
 }
 
-void fcfs_start_running(FCFSState *state) {
+void rr_start_running(RRState *state) {
   if (state == NULL || state->running_process != NULL ||
       is_empty(state->ready_queue)) {
     return; // Invalid state, no ready processes, or already running
   }
 
   // Start running the first process in the ready queue
-  state->running_process = fcfs_remove_ready(state);
+  state->running_process = rr_remove_ready(state);
   if (state->running_process != NULL) {
     state->running_since = state->current_time;
   }
 }
 
+void rr_preempt_process(RRState *state) {
+  if (state == NULL || state->running_process == NULL) {
+    return; // Invalid state or no running process
+  }
+
+  // Preempt the current running process and add it back to the ready queue
+  if (state->remaining_quantum <= 0) {
+    if (is_empty(state->ready_queue)) {
+      // If no other processes are ready, just continue running
+      state->remaining_quantum = state->quantum; // Reset quantum
+      return;
+    } else {
+      add_gantt_node(state->gantt, state->running_process->pid,
+                     state->running_since, state->current_time);
+      Process *current_process = state->running_process;
+      state->running_process = rr_remove_ready(state);
+      rr_add_ready(state, current_process);
+      state->remaining_quantum = state->quantum; // Reset quantum
+      state->running_since = state->current_time;
+    }
+  }
+}
+
 // Proceed current_time by 1
-void fcfs_next_step(FCFSState *state) {
+void rr_next_step(RRState *state) {
   if (state == NULL) {
     return; // Invalid state
   }
 
-  fcfs_get_from_pools(state);
-  fcfs_start_running(state);
-  fcfs_consume_time_waiting(state);
-  fcfs_consume_time_running(state);
+  rr_get_from_pools(state);
+  rr_preempt_process(state);
+  rr_start_running(state);
+  rr_consume_time_waiting(state);
+  rr_consume_time_running(state);
 
   state->current_time++;
+  if (state->running_process) {
+    state->remaining_quantum--;
+  }
 }
 
-void fcfs_print_stat(FCFSState *state) {
+void rr_print_stat(RRState *state) {
   if (state == NULL) {
     return; // Invalid state
   }
@@ -186,12 +217,13 @@ void fcfs_print_stat(FCFSState *state) {
     current = current->next;
   }
   printf("----------------------------------------------\n");
+
   printf("Average Waiting Time: %.2f\n", total_waiting_time / num_processes);
   printf("Average Turnaround Time: %.2f\n",
          total_turnaround_time / num_processes);
 }
 
-void execute_fcfs(FCFSState *state) {
+void execute_rr(RRState *state) {
   if (state == NULL) {
     return; // Invalid state
   }
@@ -199,9 +231,9 @@ void execute_fcfs(FCFSState *state) {
   while (!is_empty(state->ready_queue) || !is_empty(state->waiting_queue) ||
          state->running_process != NULL ||
          get_min_arrival_time(state->pool) != -1) {
-    fcfs_next_step(state);
+    rr_next_step(state);
   }
 
   print_gantt_chart(state->gantt);
-  fcfs_print_stat(state);
+  rr_print_stat(state);
 }

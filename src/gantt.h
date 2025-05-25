@@ -18,12 +18,12 @@ typedef struct gantt_chart {
 
 GanttChart *create_gantt_chart();
 
-void addGanttNode(GanttChart *chart, int pid, int start_time, int end_time);
+void add_gantt_node(GanttChart *chart, int pid, int start_time, int end_time);
 
-int evalWaitingTime(const GanttChart *chart, Process *process);
+int eval_waiting_time(const GanttChart *chart, Process *process);
 
-int evalTurnaroundTime(const GanttChart *chart, Process *process);
+int eval_turnaround_time(const GanttChart *chart, Process *process);
 
-void printGanttChart(const GanttChart *chart);
+void print_gantt_chart(const GanttChart *chart);
 
 #endif

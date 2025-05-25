@@ -11,7 +11,7 @@ GanttChart *create_gantt_chart() {
   return chart;
 }
 
-void addGanttNode(GanttChart *chart, int pid, int start_time, int end_time) {
+void add_gantt_node(GanttChart *chart, int pid, int start_time, int end_time) {
   GanttNode *new_node = (GanttNode *)malloc(sizeof(GanttNode));
   if (new_node == NULL) {
     fprintf(stderr, "Memory allocation failed\n");
@@ -33,7 +33,7 @@ void addGanttNode(GanttChart *chart, int pid, int start_time, int end_time) {
   }
 }
 
-int evalWaitingTime(const GanttChart *chart, Process *process) {
+int eval_waiting_time(const GanttChart *chart, Process *process) {
   int pid = process->pid;
   int arrival_t = process->arrival_time;
   GanttNode *temp = chart->head;
@@ -48,10 +48,10 @@ int evalWaitingTime(const GanttChart *chart, Process *process) {
     temp = temp->next;
   }
 
-  return waiting_time;
+  return waiting_time - process->io_time;
 }
 
-int evalTurnaroundTime(const GanttChart *chart, Process *process) {
+int eval_turnaround_time(const GanttChart *chart, Process *process) {
   int pid = process->pid;
   GanttNode *temp = chart->head;
   int turnaround_time = 0;
@@ -66,7 +66,7 @@ int evalTurnaroundTime(const GanttChart *chart, Process *process) {
   return turnaround_time;
 }
 
-void printGanttChart(const GanttChart *chart) {
+void print_gantt_chart(const GanttChart *chart) {
   GanttNode *temp = chart->head;
   printf("Gantt Chart:\n");
   while (temp != NULL) {

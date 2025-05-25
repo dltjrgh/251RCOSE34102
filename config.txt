@@ -1,2 +1,0 @@
-proc_n=10
-timeout=10
