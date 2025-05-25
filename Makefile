@@ -19,4 +19,4 @@ clean:
 	rm -rf $(OBJ_DIR) $(TARGET)
 
 run: $(TARGET)
-	./$(TARGET)
+	cat config.txt | xargs ./$(TARGET)
