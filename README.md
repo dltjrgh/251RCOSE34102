@@ -1,11 +1,14 @@
 # 251RCOSE34102
 
 To build, simply run:
-```make
+```
+make
 ```
 
 Then run the program with:
-```./main --num_proc=<number> --max_arrival=<number> --max_burst=<number> --max_quantum=<number>```
+```
+./main --num_proc=<number> --max_arrival=<number> --max_burst=<number> --max_quantum=<number>
+```
 
 Usage: %s --num_proc=<number> --max_arrival=<number> 
           --max_burst=<number> --max_quantum=<number>\n
