@@ -36,6 +36,24 @@ int remaining_time(Process *process) {
   return total_time;
 }
 
+int remaining_io_time(Process *process) {
+  if (!process || !process->workloads) {
+    fprintf(stderr, "Cannot calculate remaining time for a NULL process or "
+                    "empty workloads\n");
+    return -1;
+  }
+
+  int total_time = 0;
+  Node *current = process->workloads->front;
+  while (current) {
+    Workload *workload = current->data;
+    if (!workload->is_cpu) {
+      total_time += workload->duration;
+    }
+    current = current->next;
+  }
+  return total_time;
+}
 void add_workload(Queue *workloads, int duration) {
   if (!workloads) {
     fprintf(stderr, "Cannot add workload to a NULL queue\n");

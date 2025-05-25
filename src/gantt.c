@@ -75,3 +75,23 @@ void print_gantt_chart(const GanttChart *chart) {
     temp = temp->next;
   }
 }
+
+void visual_print_gantt_chart(const GanttChart *chart) {
+  GanttNode *temp = chart->head;
+  int current_time = 0;
+  printf("Gantt Chart Visualization:\n");
+  while (temp != NULL) {
+    if (temp->start_time > current_time) {
+      printf("----------%d----------\n", current_time);
+      printf("         idle         \n");
+    }
+    current_time = temp->start_time;
+    printf("----------%d----------\n", current_time);
+
+    printf("      [PID %d]      \n", temp->pid);
+    current_time = temp->end_time;
+
+    temp = temp->next;
+  }
+  printf("----------%d----------\n", current_time);
+}

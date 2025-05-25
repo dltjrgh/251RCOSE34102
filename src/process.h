@@ -25,6 +25,8 @@ Process *create_process(int pid, int arrival_time, int priority,
 
 int remaining_time(Process *process);
 
+int remaining_io_time(Process *process);
+
 // Add a workload to the queue of workloads
 void add_workload(Queue *workloads, int duration);
 

@@ -26,4 +26,6 @@ int eval_turnaround_time(const GanttChart *chart, Process *process);
 
 void print_gantt_chart(const GanttChart *chart);
 
+void visual_print_gantt_chart(const GanttChart *chart);
+
 #endif

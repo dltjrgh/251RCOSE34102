@@ -203,5 +203,6 @@ void execute_fcfs(FCFSState *state) {
   }
 
   print_gantt_chart(state->gantt);
+  visual_print_gantt_chart(state->gantt);
   fcfs_print_stat(state);
 }

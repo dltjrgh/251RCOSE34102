@@ -1,4 +1,8 @@
 #include "fcfs.h"
+#include "lif.h"
+#include "lisc.h"
+#include "plisc.h"
+#include "plif.h"
 #include "pool.h"
 #include "pps.h"
 #include "ps.h"
@@ -150,6 +154,10 @@ int main(int argc, char *argv[]) {
   Pool *ps_pool = duplicate_pool(fcfs_pool);
   Pool *pps_pool = duplicate_pool(fcfs_pool);
   Pool *rr_pool = duplicate_pool(fcfs_pool);
+  Pool *lif_pool = duplicate_pool(fcfs_pool);
+  Pool *plif_pool = duplicate_pool(fcfs_pool);
+  Pool *lisc_pool = duplicate_pool(fcfs_pool);
+  Pool *plisc_pool = duplicate_pool(fcfs_pool);
 
   printf("******************** Process Information **********************\n");
   print_heap(fcfs_pool);
@@ -186,11 +194,39 @@ int main(int argc, char *argv[]) {
   printf("***************************************************************\n");
 
   max_quantum = rand() % max_quantum + 1; // Random quantum time
-  printf("******************** RR Simulation with quantum = %d *********************\n", max_quantum);
+  printf("******************** RR Simulation with quantum = %d "
+         "*********************\n",
+         max_quantum);
   RRState *rr_state = malloc(sizeof(RRState));
   rr_state = rr_init(rr_pool, max_quantum);
   execute_rr(rr_state);
-  printf("************************************************************************\n");
+  printf("*********************************************************************"
+         "***\n");
+
+  printf("******************** LIF Simulation ***************************\n");
+  LIFState *lif_state = malloc(sizeof(LIFState));
+  lif_state = lif_init(lif_pool, tot_proc);
+  execute_lif(lif_state);
+  printf("***************************************************************\n");
+
+  printf("******************** PLIF Simulation ***************************\n");
+  PLIFState *plif_state = malloc(sizeof(PLIFState));
+  plif_state = plif_init(plif_pool, tot_proc);
+  execute_plif(plif_state);
+  printf("***************************************************************\n");
+
+  printf("******************** LISC Simulation ***************************\n");
+  LISCState *lisc_state = malloc(sizeof(LISCState));
+  lisc_state = lisc_init(lisc_pool, tot_proc);
+  execute_lisc(lisc_state);
+  printf("***************************************************************\n");
+
+  printf("******************** PLISC Simulation ***************************\n");
+  PLISCState *plisc_state = malloc(sizeof(PLISCState));
+  plisc_state = plisc_init(plisc_pool, tot_proc);
+  execute_plisc(plisc_state);
+  printf("***************************************************************\n");
+
 
   return 0;
 }
