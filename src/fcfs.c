@@ -139,12 +139,39 @@ void fcfs_next_step(FCFSState *state) {
     return; // Invalid state
   }
 
-  state->current_time++;
-
   fcfs_consume_time_waiting(state);
   fcfs_get_from_pools(state);
   fcfs_start_running(state);
   fcfs_consume_time_running(state);
+
+  state->current_time++;
+}
+
+void printStat(FCFSState *state) {
+  if (state == NULL) {
+    return; // Invalid state
+  }
+
+  // traverse the terminated queue and print the statistics of each process
+  Node *current = state->terminated_queue->front;
+  float total_waiting_time = 0;
+  float total_turnaround_time = 0;
+  float num_processes = 0;
+  while (current != NULL) {
+    Process *process = current->data;
+    printf("Process ID: %d\n", process->pid);
+    printf("Total Waiting Time: %d\n", evalWaitingTime(state->gantt, process));
+    printf("Total Turnaround Time: %d\n",
+           evalTurnaroundTime(state->gantt, process));
+    total_waiting_time += evalWaitingTime(state->gantt, process);
+    total_turnaround_time += evalTurnaroundTime(state->gantt, process);
+    num_processes++;
+    current = current->next;
+  }
+  printf("Average Waiting Time: %.2f\n",
+         total_waiting_time / num_processes);
+  printf("Average Turnaround Time: %.2f\n",
+         total_turnaround_time / num_processes);
 }
 
 void execute_fcfs(FCFSState *state) {
@@ -159,4 +186,5 @@ void execute_fcfs(FCFSState *state) {
   }
 
   printGanttChart(state->gantt);
+  printStat(state);
 }

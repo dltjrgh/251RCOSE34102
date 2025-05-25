@@ -33,11 +33,45 @@ void addGanttNode(GanttChart *chart, int pid, int start_time, int end_time) {
   }
 }
 
+int evalWaitingTime(const GanttChart *chart, Process *process) {
+  int pid = process->pid;
+  int arrival_t = process->arrival_time;
+  GanttNode *temp = chart->head;
+  int waiting_time = 0;
+  int last_end_time = arrival_t;
+
+  while (temp != NULL) {
+    if (temp->pid == pid) {
+      waiting_time += temp->start_time - last_end_time;
+      last_end_time = temp->end_time;
+    }
+    temp = temp->next;
+  }
+
+  return waiting_time;
+}
+
+int evalTurnaroundTime(const GanttChart *chart, Process *process) {
+  int pid = process->pid;
+  GanttNode *temp = chart->head;
+  int turnaround_time = 0;
+
+  while (temp != NULL) {
+    if (temp->pid == pid) {
+      turnaround_time = temp->end_time - process->arrival_time;
+    }
+    temp = temp->next;
+  }
+
+  return turnaround_time;
+}
+
 void printGanttChart(const GanttChart *chart) {
   GanttNode *temp = chart->head;
   printf("Gantt Chart:\n");
   while (temp != NULL) {
-    printf("PID: %d, Start Time: %d, End Time: %d\n", temp->pid, temp->start_time, temp->end_time);
+    printf("PID: %d, Start Time: %d, End Time: %d\n", temp->pid,
+           temp->start_time, temp->end_time);
     temp = temp->next;
   }
 }
