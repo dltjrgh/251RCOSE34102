@@ -66,6 +66,66 @@ int eval_turnaround_time(const GanttChart *chart, Process *process) {
   return turnaround_time;
 }
 
+float eval_cpu_utilization(const GanttChart *chart) {
+  GanttNode *temp = chart->head;
+  float total_time = 0;
+  float busy_time = 0;
+
+  while (temp != NULL) {
+    total_time = temp->end_time;
+    busy_time += (temp->end_time - temp->start_time);
+    temp = temp->next;
+  }
+
+  if (total_time == 0) {
+    return 0; // Avoid division by zero
+  }
+
+  return (busy_time * 100) / total_time;
+}
+
+float eval_throughput(const GanttChart *chart) {
+  GanttNode *temp = chart->head;
+  float total_processes = 0;
+  float total_time = 0;
+
+  while (temp != NULL) {
+    total_processes = (temp->pid + 1) > total_processes
+                          ? temp->pid + 1
+                          : total_processes; // Assuming PID starts from 0
+    total_time = temp->end_time;             // Last end time gives total time
+    temp = temp->next;
+  }
+
+  if (total_time == 0) {
+    return 0; // Avoid division by zero
+  }
+
+  return total_processes / total_time; // Throughput as processes per unit time
+}
+
+float eval_context_switch_rate(const GanttChart *chart) {
+  GanttNode *temp = chart->head;
+  float context_switches = 0;
+  float total_time = 0;
+
+  if (temp == NULL) {
+    return 0; // No processes, no context switches
+  }
+
+  while (temp != NULL) {
+    total_time = temp->end_time;
+    context_switches++;
+    temp = temp->next;
+  }
+
+  if (total_time == 0) {
+    return 0; // Avoid division by zero
+  }
+
+  return context_switches / total_time;
+}
+
 void print_gantt_chart(const GanttChart *chart) {
   GanttNode *temp = chart->head;
   printf("Gantt Chart:\n");

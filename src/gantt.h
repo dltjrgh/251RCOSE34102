@@ -24,6 +24,12 @@ int eval_waiting_time(const GanttChart *chart, Process *process);
 
 int eval_turnaround_time(const GanttChart *chart, Process *process);
 
+float eval_cpu_utilization(const GanttChart *chart);
+
+float eval_throughput(const GanttChart *chart);
+
+float eval_context_switch_rate(const GanttChart *chart);
+
 void print_gantt_chart(const GanttChart *chart);
 
 void visual_print_gantt_chart(const GanttChart *chart);

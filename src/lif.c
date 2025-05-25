@@ -213,6 +213,11 @@ void lif_print_stat(LIFState *state) {
   printf("Average Waiting Time: %.2f\n", total_waiting_time / num_processes);
   printf("Average Turnaround Time: %.2f\n",
          total_turnaround_time / num_processes);
+  printf("CPU Utilization: %.2f%%\n", eval_cpu_utilization(state->gantt));
+  printf("Throughput: %.2f processes/unit time\n",
+         eval_throughput(state->gantt));
+  printf("Context Switch Rate: %.2f switches/unit time\n",
+         eval_context_switch_rate(state->gantt));
 }
 
 void execute_lif(LIFState *state) {
