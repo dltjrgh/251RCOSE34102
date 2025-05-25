@@ -8,6 +8,7 @@ typedef struct gantt_node {
   int pid;
   int start_time;
   int end_time;
+  struct gantt_node *next;
 } GanttNode;
 
 typedef struct gantt_chart {
