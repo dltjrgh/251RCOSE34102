@@ -16,6 +16,7 @@ typedef struct process {
   int arrival_time;
   int priority;     // Lower number means higher priority
   int io_time;    // Total I/O time consumed
+  int wait_time;  // Total wait time in the queue
   Queue *workloads; // Pointer to the first workload in the linked list
 } Process;
 

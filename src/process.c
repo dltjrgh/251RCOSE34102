@@ -13,6 +13,7 @@ Process *create_process(int pid, int arrival_time, int priority,
   process->priority = priority;
   process->workloads = workloads;
   process->io_time = 0;
+  process->wait_time = 0;
 
   return process;
 }

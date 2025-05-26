@@ -1,6 +1,6 @@
-#include "ps.h"
+#include "psa.h"
 
-int ps_compare(Process *a, Process *b) {
+int psa_compare(Process *a, Process *b) {
   if (a->priority < b->priority) {
     return -1; // a comes before b
   } else if (a->priority > b->priority) {
@@ -10,10 +10,10 @@ int ps_compare(Process *a, Process *b) {
   }
 }
 
-PSRqueue *ps_create_rqueue(int capacity) {
-  PSRqueue *rqueue = create_heap(capacity, ps_compare);
+PSARqueue *psa_create_rqueue(int capacity) {
+  PSARqueue *rqueue = create_heap(capacity, psa_compare);
   if (!rqueue) {
-    fprintf(stderr, "Failed to create PSRqueue\n");
+    fprintf(stderr, "Failed to create PSARqueue\n");
     return NULL;
   }
 
@@ -22,7 +22,7 @@ PSRqueue *ps_create_rqueue(int capacity) {
   rqueue->data = (Process **)malloc(capacity * sizeof(Process *));
 
   if (!rqueue->data) {
-    fprintf(stderr, "Failed to allocate memory for PSRqueue data\n");
+    fprintf(stderr, "Failed to allocate memory for PSARqueue data\n");
     free(rqueue);
     exit(EXIT_FAILURE);
   }
@@ -30,15 +30,15 @@ PSRqueue *ps_create_rqueue(int capacity) {
   return rqueue;
 }
 
-PSState *ps_init(Pool *pool, int capacity) {
-  PSState *state = (PSState *)malloc(sizeof(PSState));
+PSAState *psa_init(Pool *pool, int capacity) {
+  PSAState *state = (PSAState *)malloc(sizeof(PSAState));
   if (!state) {
-    fprintf(stderr, "Failed to allocate memory for PSState\n");
+    fprintf(stderr, "Failed to allocate memory for PSA_state\n");
     return NULL;
   }
 
   state->pool = pool;
-  state->ready_queue = create_heap(capacity, ps_compare);
+  state->ready_queue = create_heap(capacity, psa_compare);
   if (!state->ready_queue) {
     free(state);
     return NULL;
@@ -54,7 +54,7 @@ PSState *ps_init(Pool *pool, int capacity) {
   return state;
 }
 
-void ps_add_ready(PSState *state, Process *process) {
+void psa_add_ready(PSAState *state, Process *process) {
   if (!state || !process) {
     return;
   }
@@ -62,7 +62,7 @@ void ps_add_ready(PSState *state, Process *process) {
   insert_heap(state->ready_queue, process);
 }
 
-void ps_add_waiting(PSState *state, Process *process) {
+void psa_add_waiting(PSAState *state, Process *process) {
   if (!state || !process) {
     return;
   }
@@ -76,7 +76,7 @@ void ps_add_waiting(PSState *state, Process *process) {
   }
 }
 
-void ps_add_terminated(PSState *state, Process *process) {
+void psa_add_terminated(PSAState *state, Process *process) {
   if (!state || !process) {
     return;
   }
@@ -84,7 +84,7 @@ void ps_add_terminated(PSState *state, Process *process) {
   enqueue(state->terminated_queue, process);
 }
 
-Process *ps_remove_ready(PSState *state) {
+Process *psa_remove_ready(PSAState *state) {
   if (!state || state->ready_queue->size == 0) {
     return NULL;
   }
@@ -92,7 +92,7 @@ Process *ps_remove_ready(PSState *state) {
   return extract_min(state->ready_queue);
 }
 
-Process *ps_remove_waiting(PSState *state) {
+Process *psa_remove_waiting(PSAState *state) {
   if (!state || is_empty(state->waiting_queue)) {
     return NULL;
   }
@@ -100,7 +100,7 @@ Process *ps_remove_waiting(PSState *state) {
   return dequeue(state->waiting_queue);
 }
 
-void ps_consume_time_waiting(PSState *state) {
+void psa_consume_time_waiting(PSAState *state) {
   if (!state || is_empty(state->waiting_queue)) {
     return;
   }
@@ -113,16 +113,16 @@ void ps_consume_time_waiting(PSState *state) {
     }
     if (workload->is_cpu == 0 && workload->duration == 0) {
       remove_workload(process);
-      ps_remove_waiting(state);
+      psa_remove_waiting(state);
       if (is_empty(process->workloads)) {
-        ps_add_terminated(state, process);
+        psa_add_terminated(state, process);
       } else {
-        ps_add_ready(state, process);
+        psa_add_ready(state, process);
       }
     }
   }
 }
-void ps_consume_time_running(PSState *state) {
+void psa_consume_time_running(PSAState *state) {
   if (!state || !state->running_process) {
     return;
   }
@@ -136,23 +136,23 @@ void ps_consume_time_running(PSState *state) {
                      state->running_since, state->current_time + 1);
       remove_workload(state->running_process);
       if (is_empty(state->running_process->workloads)) {
-        ps_add_terminated(state, state->running_process);
+        psa_add_terminated(state, state->running_process);
         state->running_process = NULL;
       } else {
-        ps_add_waiting(state, state->running_process);
+        psa_add_waiting(state, state->running_process);
         state->running_process = NULL;
       }
     }
   }
 }
 
-void ps_get_from_pools(PSState *state) {
+void psa_get_from_pools(PSAState *state) {
 
   while (get_min_arrival_time(state->pool) <= state->current_time) {
 
     Process *process = extract_min(state->pool);
     if (process != NULL) {
-      ps_add_ready(state, process);
+      psa_add_ready(state, process);
     }
 
     if (get_min_arrival_time(state->pool) == -1) {
@@ -161,30 +161,75 @@ void ps_get_from_pools(PSState *state) {
   }
 }
 
-void ps_start_running(PSState *state) {
+void psa_start_running(PSAState *state) {
   if (!state || state->running_process || is_empty_heap(state->ready_queue)) {
     return; // Already running a process
   }
-  state->running_process = ps_remove_ready(state);
+  state->running_process = psa_remove_ready(state);
   if (state->running_process) {
     state->running_since = state->current_time;
   }
 }
 
-void ps_next_step(PSState *state) {
+void psa_age(PSAState *state) {
+  if (!state || is_empty_heap(state->ready_queue)) {
+    return; // No processes to age
+  }
+
+  if (state->running_process) {
+    state->running_process->priority--; // Increase priority of running process
+  }
+
+  // Age all processes in the waiting queue
+  Node *current = state->waiting_queue->front;
+  while (current != NULL) {
+    Process *process = current->data;
+    process->priority--; // Increase priority
+    current = current->next;
+  }
+
+  // Create a temporary heap to hold aged processes
+  PSARqueue *temp_heap = psa_create_rqueue(state->ready_queue->capacity);
+  if (!temp_heap) {
+    return; // Failed to create temporary heap
+  }
+
+  while (state->ready_queue->size > 0) {
+    Process *process = extract_min(state->ready_queue);
+    if (process) {
+      process->priority--;             // Increase priority
+      insert_heap(temp_heap, process); // Reinsert into temp heap
+    }
+  }
+
+  // Move aged processes back to the original ready queue
+  while (temp_heap->size > 0) {
+    Process *aged_process = extract_min(temp_heap);
+    insert_heap(state->ready_queue, aged_process);
+  }
+
+  free(temp_heap->data);
+  free(temp_heap);
+}
+
+void psa_next_step(PSAState *state) {
   if (!state) {
     return;
   }
 
-  ps_get_from_pools(state);
-  ps_start_running(state);
-  ps_consume_time_waiting(state);
-  ps_consume_time_running(state);
+  psa_get_from_pools(state);
+  psa_start_running(state);
+  psa_consume_time_waiting(state);
+  psa_consume_time_running(state);
 
   state->current_time++;
+
+  if (state->current_time % 20 == 0) {
+    psa_age(state); // Age processes every 20 time units
+  }
 }
 
-void ps_print_stat(PSState *state) {
+void psa_print_stat(PSAState *state) {
   if (state == NULL) {
     return; // Invalid state
   }
@@ -220,7 +265,7 @@ void ps_print_stat(PSState *state) {
          eval_context_switch_rate(state->gantt));
 }
 
-void execute_ps(PSState *state) {
+void execute_psa(PSAState *state) {
   if (!state) {
     return;
   }
@@ -228,9 +273,9 @@ void execute_ps(PSState *state) {
   while (!is_empty_heap(state->ready_queue) ||
          !is_empty(state->waiting_queue) || state->running_process != NULL ||
          get_min_arrival_time(state->pool) != -1) {
-    ps_next_step(state);
+    psa_next_step(state);
   }
 
   print_gantt_chart(state->gantt);
-  ps_print_stat(state);
+  psa_print_stat(state);
 }

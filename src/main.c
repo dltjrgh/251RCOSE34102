@@ -7,6 +7,8 @@
 #include "pps.h"
 #include "ps.h"
 #include "psjf.h"
+#include "hrn.h"
+#include "psa.h"
 #include "rr.h"
 #include "sjf.h"
 #include <getopt.h>
@@ -261,6 +263,8 @@ int main(int argc, char *argv[]) {
   Pool *plif_pool = duplicate_pool(fcfs_pool);
   Pool *lisc_pool = duplicate_pool(fcfs_pool);
   Pool *plisc_pool = duplicate_pool(fcfs_pool);
+  Pool *psa_pool = duplicate_pool(fcfs_pool);
+  Pool *hrn_pool = duplicate_pool(fcfs_pool);
 
   printf("******************** Process Information **********************\n");
   print_heap(fcfs_pool);
@@ -328,6 +332,18 @@ int main(int argc, char *argv[]) {
   PLISCState *plisc_state = malloc(sizeof(PLISCState));
   plisc_state = plisc_init(plisc_pool, tot_proc);
   execute_plisc(plisc_state);
+  printf("***************************************************************\n");
+
+  printf("******************** PSA Simulation ***************************\n");
+  PSAState *psa_state = malloc(sizeof(PSAState));
+  psa_state = psa_init(psa_pool, tot_proc);
+  execute_psa(psa_state);
+  printf("***************************************************************\n");
+
+  printf("******************** HRN Simulation ***************************\n");
+  HRNState *hrn_state = malloc(sizeof(HRNState));
+  hrn_state = hrn_init(hrn_pool, tot_proc);
+  execute_hrn(hrn_state);
   printf("***************************************************************\n");
 
   return 0;
